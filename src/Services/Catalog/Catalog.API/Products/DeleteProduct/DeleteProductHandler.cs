@@ -21,12 +21,11 @@ namespace Catalog.API.Products.DeleteProduct
 
     public record DeleteProductResult(bool IsSuccess);
 
-    public class DeleteProductHandler (IDocumentSession session, ILogger<DeleteProductHandler> logger)
+    public class DeleteProductHandler (IDocumentSession session)
         : ICommandHandler<DeleteProductCommand, DeleteProductResult>
     {
         public async Task<DeleteProductResult> Handle(DeleteProductCommand command, CancellationToken cancellationToken)
         {
-            logger.LogInformation("DeleteProductHandler.Handle => ");
 
             session.Delete<Product>(command.Id);
 

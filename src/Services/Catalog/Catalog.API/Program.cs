@@ -1,6 +1,9 @@
 using BuildingBlocks.Behaviours;
+using BuildingBlocks.Exceptions.Handler;
 using Carter;
+using Catalog.API.Data;
 using FluentValidation;
+using HealthChecks.UI.Client;
 using Marten;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +19,7 @@ builder.Services.AddMediatR(config =>
     //inregistrare pipeline behaviour cu fluentvalidations -- partea misto e ca se activeaza doar la mediator.Send()
     //nu la orice request ca la custommiddleware
     config.AddOpenBehavior(typeof(ValidationBehaviours<,>));
+    config.AddOpenBehavior(typeof(LoggingBehaviour<,>));
 });
 
 //custom middleware validator
@@ -29,6 +33,15 @@ builder.Services.AddMarten(opt =>
 
 }).UseLightweightSessions();
 
+//seed 
+if (builder.Environment.IsDevelopment())
+    builder.Services.InitializeMartenWith<CatalogInitialData>();
+
+//global IExceptionHandler registered as a singleton service
+builder.Services.AddExceptionHandler<CustomExceptionHandler>();
+
+//healthcheck for posgresql database
+builder.Services.AddHealthChecks().AddNpgSql(builder.Configuration.GetConnectionString("Database"));
 
 var app = builder.Build();
 //MIDDLEWARE
@@ -40,35 +53,47 @@ var app = builder.Build();
 
 app.MapCarter();
 
-app.UseExceptionHandler(appBuilder => {
+//am reununtat la asta si am facut cu IExceptionHandler vezi in BuildingBlocks
+//app.UseExceptionHandler(appBuilder => {
 
-    appBuilder.Run(async (context) => {
+//    appBuilder.Run(async (context) => {
 
-        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+//        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
 
-        if(exception == null)
-        {
-            return;
-        }
+//        if(exception == null)
+//        {
+//            return;
+//        }
 
-        var problemDetails = new ProblemDetails
-        {
-            Title = exception.Message,
-            Status = StatusCodes.Status500InternalServerError,
-            Detail = exception.StackTrace
-        };
+//        var problemDetails = new ProblemDetails
+//        {
+//            Title = exception.Message,
+//            Status = StatusCodes.Status500InternalServerError,
+//            Detail = exception.StackTrace
+//        };
 
-        var logger = context.RequestServices.GetService<ILogger<Program>>();
-        logger.LogError(exception, exception.Message);
+//        var logger = context.RequestServices.GetService<ILogger<Program>>();
+//        logger.LogError(exception, exception.Message);
 
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/json";
+//        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+//        context.Response.ContentType = "application/json";
 
-        await context.Response.WriteAsJsonAsync(problemDetails);
-    });
+//        await context.Response.WriteAsJsonAsync(problemDetails);
+//    });
 
 
-});
+//});
+//ca sa foloseasca custom exception Handelrele pe care le gaseste in pipeline
+//l-am inregistrat pe asta CustomExceptionHandler
+app.UseExceptionHandler(options => { });
+
+app.UseHealthChecks("/health",
+    new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions()
+    {
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    }
+    
+    );
 
 
 app.Run();

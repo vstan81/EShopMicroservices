@@ -2,10 +2,6 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Http;
-using System.Globalization;
-using System.Net.Http;
-
-
 
 namespace BuildingBlocks.Behaviours
 {    //pipeline behaviour with MediatR and FluentValidations
@@ -28,7 +24,7 @@ namespace BuildingBlocks.Behaviours
 
 
 
-    //custom pipeline behaviour with  FluentValidations -
+    //custom pipeline behaviour with  FluentValidations - nu merge
     public class ValidationCustomMiddleware
     {
         private readonly RequestDelegate _next;

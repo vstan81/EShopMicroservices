@@ -13,17 +13,16 @@ namespace Catalog.API.Products.GetProductById
 
     public record GetProductByIdResult(Product Product);
 
-    public class GetProductByIdHandler(IDocumentSession session, ILogger<GetProductByIdHandler> logger) 
+    public class GetProductByIdHandler(IDocumentSession session) 
         : IQueryHandler<GetProductByIdQuery, GetProductByIdResult>
     {
         public async Task<GetProductByIdResult> Handle(GetProductByIdQuery query, CancellationToken cancellationToken)
         {
-            logger.LogInformation("GetProductByIdResult.Handle -> Started porcessing query {@Query}", query);
 
             var result = await session.LoadAsync<Product>(query.Id, cancellationToken);
 
             if (result is null)
-                throw new ProductNotFoundException();
+                throw new ProductNotFoundException(query.Id);
 
             return new GetProductByIdResult(result);
 
